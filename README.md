@@ -14,3 +14,10 @@ I'll write a little summary the in some days, but dunno.
 If you read through the code, and see something wrong, or got a good explaination for the parts
 I didn't unterstand (The comments spot the parts) you can leave an [issue](https://github.com/sateffen/rust-tcp-server/issues)
 to explain.
+
+## Todos ##
+
+Things to do:
+
+* Add logging
+* Do something useful with the received data
