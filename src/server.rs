@@ -85,8 +85,8 @@ impl Server {
             // under mio) sometimes make stupid things
             token: Token(1),
             // and because we start the Token(1), we have to tell the Slab to start at
-            // Token(2) and enable it to go up to 128 (so 126 connections)
-            connections: Slab::new_starting_at(Token(2), 128),
+            // Token(2) and enable it to go up to 16384 (so 16382 connections)
+            connections: Slab::new_starting_at(Token(2), 16384),
         }
     }
 
@@ -176,7 +176,6 @@ impl Server {
         // and finally, we need to reregister to the loop, because we actually handled an event
         // on the server, and we need to reregister the event receiver
         self.reregister(event_loop);
-
     }
 
     // and we need a close connection function. This will close given connection with given
@@ -188,6 +187,7 @@ impl Server {
             event_loop.shutdown();
         } else {
             self.connections.remove(token);
+            println!("Closed a connection, got {} connections left", self.connections.count());
         }
     }
 
