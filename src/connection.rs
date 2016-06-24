@@ -66,10 +66,10 @@ impl Connection {
             }
         }
 
-        // then, just for debugging, we convert the received buffer to an utf8 string
-        let buffer_as_string = String::from_utf8(buffer_list.clone()).ok().expect("Received buffer could not be parsed");
-        // and print it, so we know something happend
-        println!("Received: {}", buffer_as_string);
+        // // then, just for debugging, we convert the received buffer to an utf8 string
+        // let buffer_as_string = String::from_utf8(buffer_list.clone()).ok().expect("Received buffer could not be parsed");
+        // // and print it, so we know something happend
+        // println!("Received: {}", buffer_as_string);
 
         // because we echo everything, we simply send the received buffer back (just try it, it's not important currently)
         try!(self.send_message(buffer_list));
@@ -141,5 +141,10 @@ impl Connection {
             self.interest,
             PollOpt::edge() | PollOpt::oneshot()
         )
+    }
+
+    // this method closes the connection down by cleaning everything up
+    pub fn close(&mut self, event_loop: &mut EventLoop<Server>) -> Result<()> {
+        event_loop.deregister(&self.socket)
     }
 }

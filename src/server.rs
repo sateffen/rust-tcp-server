@@ -186,8 +186,15 @@ impl Server {
         if self.token == token {
             event_loop.shutdown();
         } else {
+            match self.find_connection_by_token(token).close(event_loop) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Could not deregister token {:?} {:?}", token, e);
+                }
+            };
             self.connections.remove(token);
-            println!("Closed a connection, got {} connections left", self.connections.count());
+            println!("Closed a connection, got {} connections left",
+                     self.connections.count());
         }
     }
 
