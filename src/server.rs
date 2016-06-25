@@ -118,60 +118,47 @@ impl Server {
     // this function gets called, whenever there is a socket connection to accept
     // this will read the socket and handle it
     fn accept(&mut self, event_loop: &mut EventLoop<Server>) {
-        // first extract the socket to receive by accepting the TcpListener
-        let socket = match self.socket.accept() {
-            // and if the accept was successful
-            Ok(s) => {
-                // we need to check if the socket still exists (don't ask why, but we
-                // have to do it)
-                match s {
-                    // and if we found something, we return it
-                    Some((socket, _)) => socket,
-                    // else just reregister to the eventloop and do nothing, because
-                    // there is nothing
-                    None => {
-                        self.reregister(event_loop);
-                        return;
-                    }
-                }
-            }
-            // else if there was an error, just reregister to the eventloop and
-            // do nothing. Maybe log the error?
-            Err(_) => {
-                self.reregister(event_loop);
-                return;
-            }
-        };
-        // now, after this long block, we have an actual socket. Now we can work
-        // with the socket
+        // now we loop to accept every socket we can. We have to do this, because
+        // it's mentioned here: https://github.com/carllerche/mio/issues/380
+        loop {
+            // first extract the socket to receive by accepting the TcpListener
+            // if anything goes wrong, like an error or the socket is not ready, we break
+            // the loop, because we can't do anything else
+            let socket = match self.socket.accept() {
+                Ok(Some((socket, _))) => socket,
+                Ok(None) => break,
+                Err(_) => break,
+            };
+            // now we have an actual socket. Now we can work with the socket
 
-        // so now we say the connections Slab, that we want to insert something to
-        // get a place to do so
-        match self.connections.insert_with(|token| {
-            // and because we have a place for the socket, we create a connection
-            // struct and return it
-            Connection::new(socket, token)
-        }) {
-            // if the insert was successful
-            Some(token) => {
-                // we register the token to the eventloop
-                match self.find_connection_by_token(token).register(event_loop) {
-                    // and do nothing else
-                    Ok(_) => {}
-                    // else there was an error. Maybe log the error?
-                    Err(_) => {
-                        // so we remove the socket again. It was never added to the
-                        // eventloop, so no error event will ever occur, so we need to
-                        // clean up
-                        self.connections.remove(token);
+            // so now we say the connections Slab, that we want to insert something to
+            // get a place to do so
+            match self.connections.insert_with(|token| {
+                // and because we have a place for the socket, we create a connection
+                // struct and return it
+                Connection::new(socket, token)
+            }) {
+                // if the insert was successful
+                Some(token) => {
+                    // we register the token to the eventloop
+                    match self.find_connection_by_token(token).register(event_loop) {
+                        // and do nothing else
+                        Ok(_) => {}
+                        // else there was an error. Maybe log the error?
+                        Err(_) => {
+                            // so we remove the socket again. It was never added to the
+                            // eventloop, so no error event will ever occur, so we need to
+                            // clean up
+                            self.connections.remove(token);
+                        }
                     }
                 }
-            }
-            // else we can't add something to the Slab anymore, so tellt
-            None => {
-                println!("Slab is full, can't accept any connections anymore");
-            }
-        };
+                // else we can't add something to the Slab anymore, so tell it
+                None => {
+                    println!("Slab is full, can't accept any connections anymore");
+                }
+            };
+        }
 
         // and finally, we need to reregister to the loop, because we actually handled an event
         // on the server, and we need to reregister the event receiver
